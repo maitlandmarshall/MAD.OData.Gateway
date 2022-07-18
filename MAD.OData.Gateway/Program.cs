@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.AspNetCore.OData;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddJsonFile("appsettings.Local.json", true);
+
 var edmModel = await new EdmModelFactory(builder.Configuration.GetConnectionString("odata")).Create();
 
 // Add services to the container.
