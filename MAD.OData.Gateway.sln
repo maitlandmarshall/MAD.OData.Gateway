@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32526.322
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MAD.OData.Gateway", "MAD.OData.Gateway\MAD.OData.Gateway.csproj", "{FB3C998F-BA0A-4324-83C9-29E9261F113B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FB3C998F-BA0A-4324-83C9-29E9261F113B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB3C998F-BA0A-4324-83C9-29E9261F113B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB3C998F-BA0A-4324-83C9-29E9261F113B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB3C998F-BA0A-4324-83C9-29E9261F113B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D55E2EBE-53F8-4254-AB36-5BC02FB1B738}
+	EndGlobalSection
+EndGlobal
