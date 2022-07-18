@@ -1,21 +1,28 @@
+using MAD.OData.Gateway.Services;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Microsoft.AspNetCore.OData;
+
 var builder = WebApplication.CreateBuilder(args);
+var edmModel = await new EdmModelFactory(builder.Configuration.GetConnectionString("odata")).Create();
 
 // Add services to the container.
+builder.Services.AddControllers().AddOData(opt => opt.AddRouteComponents(edmModel).Filter().Select());
+builder.Services.AddSingleton<MatcherPolicy, ODataMatcherPolicy>();
+builder.Services.AddSingleton(edmModel);
+builder.Services.AddTransient<IApplicationModelProvider, ODataApplicationModelProvider>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 
-app.UseHttpsRedirection();
+app.UseODataRouteDebug();
 
-var summaries = new[]
+app.UseRouting();
+app.UseEndpoints(endpoints =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    
+    endpoints.MapControllers();
 });
+
+// Configure the HTTP request pipeline.
+app.UseHttpsRedirection();
 
 app.Run();
