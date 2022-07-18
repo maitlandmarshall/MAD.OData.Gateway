@@ -26,8 +26,23 @@ namespace MAD.OData.Gateway.Services
 
                 foreach (var a in c.Actions)
                 {
+                    ODataPathTemplate path;
+
+                    if (a.ActionName == nameof(GatewayODataController.Get))
+                    {
+                        path = new ODataPathTemplate(new GenericODataSegmentTemplate("/{entityset}"));
+                    }
+                    else if (a.ActionName == nameof(GatewayODataController.Count))
+                    {
+                        path = new ODataPathTemplate(new GenericODataSegmentTemplate("/{entityset}/$count"));
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
                     a.Selectors.Clear();
-                    a.AddSelector(a.ActionName, string.Empty, this.edmModel, new ODataPathTemplate(new EntitySetTemplateSegment()));
+                    a.AddSelector("get", string.Empty, this.edmModel, path);
                 }
             }
         }

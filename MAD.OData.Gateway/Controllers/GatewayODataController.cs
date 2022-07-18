@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.OData.Formatter.Value;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.AspNetCore.OData.Routing.Controllers;
 using Microsoft.OData.Edm;
+using SqlKata;
 using SqlKata.Execution;
 
 namespace MAD.OData.Gateway.Controllers
@@ -22,7 +23,6 @@ namespace MAD.OData.Gateway.Controllers
             this.sqlKataFactory = sqlKataFactory;
         }
 
-        [EnableQuery]
         [HttpGet("{entityset}")]
         public async Task<IActionResult> Get(string entitySet)
         {
@@ -34,7 +34,32 @@ namespace MAD.OData.Gateway.Controllers
             var queryOptions = GetODataQueryOptions(edmEntitySet);
 
             using var db = this.sqlKataFactory.Create();
-            var query = db.Query(entitySet);
+            var query = this.GetQuery(db, edmEntitySet, queryOptions);
+
+            var results = (await query.GetAsync()).Cast<IDictionary<string, object>>().ToList();
+
+            return this.Ok(this.GetEdmEntityObjects(results, edmEntitySet));
+        }
+
+        [HttpGet("{entityset}/$count")]
+        public async Task<IActionResult> Count(string entitySet)
+        {
+            var edmEntitySet = this.edmModel.FindDeclaredEntitySet(entitySet);
+
+            if (edmEntitySet is null)
+                return this.NotFound();
+
+            var queryOptions = GetODataQueryOptions(edmEntitySet);
+
+            using var db = this.sqlKataFactory.Create();
+            var query = this.GetQuery(db, edmEntitySet, queryOptions);
+
+            return this.Ok(await query.CountAsync<int>());
+        }
+
+        private Query GetQuery(QueryFactory db, IEdmEntitySet entitySet, ODataQueryOptions queryOptions)
+        {
+            var query = db.Query(entitySet.Name);
 
             if (queryOptions.Top != null)
             {
@@ -49,14 +74,12 @@ namespace MAD.OData.Gateway.Controllers
             //if (queryOptions.Filter != null)
             //{
             //    var filter = queryOptions.Filter;
-                
-                
+
+
             //    ODataQuery
             //}
 
-            var results = (await query.GetAsync()).Cast<IDictionary<string, object>>().ToList();
-
-            return this.Ok(this.GetEdmEntityObjects(results, edmEntitySet));
+            return query;
         }
 
         private EdmEntityObjectCollection GetEdmEntityObjects(IEnumerable<IDictionary<string, object>> entities, IEdmEntitySet edmEntitySet)

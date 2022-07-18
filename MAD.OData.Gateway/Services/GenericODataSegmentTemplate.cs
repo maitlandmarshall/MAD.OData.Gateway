@@ -5,11 +5,18 @@ using Microsoft.OData.UriParser;
 
 namespace MAD.OData.Gateway.Services
 {
-    public class EntitySetTemplateSegment : ODataSegmentTemplate
+    public class GenericODataSegmentTemplate : ODataSegmentTemplate
     {
+        private readonly string[] templates;
+
+        public GenericODataSegmentTemplate(params string[] templates)
+        {
+            this.templates = templates;
+        }
+
         public override IEnumerable<string> GetTemplates(ODataRouteOptions options)
         {
-            yield return "/{entityset}";
+            return this.templates;
         }
 
         public override bool TryTranslate(ODataTemplateTranslateContext context)
