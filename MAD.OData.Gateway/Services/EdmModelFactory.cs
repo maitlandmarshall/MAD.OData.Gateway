@@ -31,7 +31,7 @@ namespace MAD.OData.Gateway.Services
                 
                 foreach (var col in t.Columns)
                 {
-                    var prop = tableType.AddStructuralProperty(col.Name, this.GetEdmPrimitiveTypeKind(col));
+                    var prop = tableType.AddStructuralProperty(col.Name, this.GetEdmPrimitiveTypeKind(col), col.IsPrimaryKey == false);
 
                     if (col.IsPrimaryKey)
                     {
@@ -68,9 +68,17 @@ namespace MAD.OData.Gateway.Services
             else if (type == typeof(Guid))
                 return EdmPrimitiveTypeKind.Guid;
 
-            else if (type == typeof(DateTime) || type == typeof(DateTimeOffset))
-                return EdmPrimitiveTypeKind.DateTimeOffset;
-
+            else if (type == typeof(DateTime))
+            {
+                if (column.DbDataType == "date")
+                {
+                    return EdmPrimitiveTypeKind.Date;
+                }
+                else
+                {
+                    return EdmPrimitiveTypeKind.DateTimeOffset;
+                }
+            }
             else if (type == typeof(TimeSpan))
                 return EdmPrimitiveTypeKind.Duration;
 
