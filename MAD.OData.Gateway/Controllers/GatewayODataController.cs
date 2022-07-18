@@ -1,42 +1,49 @@
 ﻿
+using MAD.OData.Gateway.DynamicDbContext;
 using MAD.OData.Gateway.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Extensions;
 using Microsoft.AspNetCore.OData.Formatter.Value;
 using Microsoft.AspNetCore.OData.Query;
+using Microsoft.AspNetCore.OData.Results;
+using Microsoft.AspNetCore.OData.Routing.Attributes;
 using Microsoft.AspNetCore.OData.Routing.Controllers;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.ModelBuilder;
 using SqlKata;
 using SqlKata.Execution;
 
 namespace MAD.OData.Gateway.Controllers
 {
     [Route("")]
+    [ODataRouteComponent]
     public class GatewayODataController : ODataController
     {
         private readonly IEdmModel edmModel;
         private readonly SqlKataFactory sqlKataFactory;
+        private readonly DbContext dynamicDbContext;
 
-        public GatewayODataController(IEdmModel edmModel, SqlKataFactory sqlKataFactory)
+        public GatewayODataController(IEdmModel edmModel, SqlKataFactory sqlKataFactory, DbContext dynamicDbContext)
         {
             this.edmModel = edmModel;
             this.sqlKataFactory = sqlKataFactory;
+            this.dynamicDbContext = dynamicDbContext;
         }
 
         [HttpGet("{entityset}")]
-        public async Task<IActionResult> Get(string entitySet)
+        [EnableQuery(MaxTop = 1000, PageSize = 1000)]
+        public IActionResult Get(string entitySet)
         {
             var edmEntitySet = this.edmModel.FindDeclaredEntitySet(entitySet);
 
             if (edmEntitySet is null)
                 return this.NotFound();
 
-            using var db = this.sqlKataFactory.Create();
-            var query = this.GetQuery(db, edmEntitySet);
+            var entityQueryable = this.dynamicDbContext.Query(entitySet).AsQueryable();
 
-            var results = (await query.GetAsync()).Cast<IDictionary<string, object>>().ToList();
-
-            return this.Ok(this.GetEdmEntityObjects(results, edmEntitySet));
+            return this.Ok(entityQueryable);
         }
 
         [HttpGet("{entityset}/$count")]
@@ -55,17 +62,15 @@ namespace MAD.OData.Gateway.Controllers
 
         private Query GetQuery(QueryFactory db, IEdmEntitySet entitySet)
         {
-            var queryOptions = GetODataQueryOptions(entitySet);
+            var queryOptions = this.GetODataQueryOptions(entitySet);
             var query = db.Query(entitySet.Name);
+            var top = Math.Max(Math.Min(queryOptions.Top?.Value ?? 1000, 1000), 0);
 
-            if (queryOptions.Top != null)
-            {
-                query = query.Take(queryOptions.Top.Value);
-            }
+            query = query.Take(top);
 
             if (queryOptions.Skip != null)
             {
-                query = query.Skip(queryOptions.Skip.Value);
+                query = query.Skip(Math.Max(queryOptions.Skip.Value, 0));
             }
 
             //if (queryOptions.Filter != null)

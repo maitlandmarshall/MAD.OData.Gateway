@@ -1,5 +1,8 @@
 ﻿using DatabaseSchemaReader;
 using DatabaseSchemaReader.DataSchema;
+using MAD.OData.Gateway.DynamicDbContext;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.OData.Edm;
 using Microsoft.OData.ModelBuilder;
 using System.Data.SqlClient;
@@ -8,15 +11,18 @@ namespace MAD.OData.Gateway.Services
 {
     public class EdmModelFactory
     {
+        private readonly DynamicDbContextFactory dynamicDbContextFactory;
         private readonly string connectionString;
 
-        public EdmModelFactory(string connectionString)
+        public EdmModelFactory(DynamicDbContextFactory dynamicDbContextFactory, string connectionString)
         {
+            this.dynamicDbContextFactory = dynamicDbContextFactory;
             this.connectionString = connectionString;
         }
 
         public async Task<IEdmModel> Create()
         {
+            using var db = this.dynamicDbContextFactory.CreateDbContext(this.connectionString);
             var connection = new SqlConnection(this.connectionString);
             var reader = new DatabaseReader(connection);
             var tables = reader.TablesQuickView();
@@ -27,7 +33,11 @@ namespace MAD.OData.Gateway.Services
 
             foreach (var t in tables)
             {
-                var tableType = new EdmEntityType(t.SchemaOwner, t.Name);
+                if (t.Name == "__EFMigrationsHistory")
+                    continue;
+
+                var entityType = this.GetEntityType(db, t);
+                var tableType = new EdmEntityType(entityType.ClrType.Namespace, entityType.ClrType.Name);
                 
                 foreach (var col in t.Columns)
                 {
@@ -40,10 +50,28 @@ namespace MAD.OData.Gateway.Services
                 }
 
                 edmModel.AddElement(tableType);
-                container.AddEntitySet($"{t.SchemaOwner}.{t.Name}", tableType);
+                var es = container.AddEntitySet($"{t.SchemaOwner}.{t.Name}", tableType);
             }
 
             return edmModel;
+        }
+
+        private IEntityType GetEntityType(DbContext context, DatabaseTable t)
+        {
+            var entityTypes = context.Model.GetEntityTypes();
+
+            foreach (var et in entityTypes)
+            {
+                if (et.GetSchema() != t.SchemaOwner)
+                    continue;
+
+                if (et.GetTableName() != t.Name)
+                    continue;
+
+                return et;
+            }
+
+            return null;
         }
 
         private EdmPrimitiveTypeKind GetEdmPrimitiveTypeKind(DatabaseColumn column)
@@ -68,7 +96,7 @@ namespace MAD.OData.Gateway.Services
             else if (type == typeof(Guid))
                 return EdmPrimitiveTypeKind.Guid;
 
-            else if (type == typeof(DateTime))
+            else if (type == typeof(DateTime) || type == typeof(DateTimeOffset))
             {
                 if (column.DbDataType == "date")
                 {

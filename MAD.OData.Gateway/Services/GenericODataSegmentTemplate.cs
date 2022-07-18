@@ -36,6 +36,7 @@ namespace MAD.OData.Gateway.Services
             {
                 var segment = new EntitySetSegment(edmEntitySet);
                 context.Segments.Add(segment);
+
                 return true;
             }
 
