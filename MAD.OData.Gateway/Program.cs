@@ -17,7 +17,7 @@ builder.Services.Configure<AuthConfig>(builder.Configuration.GetSection("authent
 builder.Services.AddTransient<AuthConfig>(cfg => cfg.GetRequiredService<IOptions<AuthConfig>>().Value);
 
 // Add services to the container.
-builder.Services.AddControllers().AddOData(opt => opt.AddRouteComponents(edmModel).EnableQueryFeatures(1000));
+builder.Services.AddControllers().AddOData(opt => opt.AddRouteComponents(edmModel).EnableQueryFeatures());
 builder.Services.AddSingleton(edmModel);
 builder.Services.AddTransient<IApplicationModelProvider, ODataApplicationModelProvider>();
 builder.Services.AddTransient<BasicAuthenticationMiddleware>();
@@ -25,7 +25,11 @@ builder.Services.AddSingleton<DynamicDbContextFactory>(dbFactory);
 builder.Services.AddScoped<DbContext>(services =>
 {
     var dynamicDbContextFactory = services.GetRequiredService<DynamicDbContextFactory>();
-    return dynamicDbContextFactory.CreateDbContext(builder.Configuration.GetConnectionString("odata"));
+    var dbContext = dynamicDbContextFactory.CreateDbContext(builder.Configuration.GetConnectionString("odata"));
+
+    dbContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(30));
+
+    return dbContext;
 });
 
 var app = builder.Build();

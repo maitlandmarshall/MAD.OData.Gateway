@@ -21,6 +21,8 @@ namespace MAD.OData.Gateway.Middlewares
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
                     context.Response.Headers["WWW-Authenticate"] = "Basic";
+
+                    return;
                 }
             }
 
