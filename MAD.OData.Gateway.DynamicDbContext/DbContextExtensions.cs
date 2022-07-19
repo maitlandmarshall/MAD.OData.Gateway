@@ -16,10 +16,13 @@ namespace MAD.OData.Gateway.DynamicDbContext
 
             foreach (var et in entityTypes)
             {
-                if (et.GetSchema() != schema)
+                var etSchema = et.GetDefaultSchema();
+                var etTableName = et.GetDefaultTableName();
+
+                if (etSchema != schema)
                     continue;
 
-                if (et.GetTableName() != name)
+                if (etTableName != name)
                     continue;
 
                 return (IQueryable)SetMethod.MakeGenericMethod(et.ClrType).Invoke(context, null);
