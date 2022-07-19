@@ -1,11 +1,9 @@
-﻿using DatabaseSchemaReader;
-using DatabaseSchemaReader.DataSchema;
+﻿using Castle.DynamicProxy.Internal;
 using MAD.OData.Gateway.DynamicDbContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal;
 using Microsoft.OData.Edm;
-using Microsoft.OData.ModelBuilder;
-using System.Data.SqlClient;
 
 namespace MAD.OData.Gateway.Services
 {
@@ -23,60 +21,41 @@ namespace MAD.OData.Gateway.Services
         public async Task<IEdmModel> Create()
         {
             using var db = this.dynamicDbContextFactory.CreateDbContext(this.connectionString);
-            var connection = new SqlConnection(this.connectionString);
-            var reader = new DatabaseReader(connection);
-            var tables = reader.TablesQuickView();
+            var entityTypes = db.Model.GetEntityTypes();
 
             var edmModel = new EdmModel();
             var container = new EdmEntityContainer("MAD.OData.Gateway", "EntityContainer");
             edmModel.AddElement(container);
 
-            foreach (var t in tables)
+            foreach (var entityType in entityTypes)
             {
-                if (t.Name == "__EFMigrationsHistory")
+                if (entityType.Name == "__EFMigrationsHistory")
                     continue;
 
-                var entityType = this.GetEntityType(db, t);
                 var tableType = new EdmEntityType(entityType.ClrType.Namespace, entityType.ClrType.Name);
-                
-                foreach (var col in t.Columns)
-                {
-                    var prop = tableType.AddStructuralProperty(col.Name, this.GetEdmPrimitiveTypeKind(col), col.IsPrimaryKey == false);
+                var columns = entityType.GetProperties();
 
-                    if (col.IsPrimaryKey)
+                foreach (var col in columns)
+                {
+                    var isPk = col.IsPrimaryKey();
+                    var prop = tableType.AddStructuralProperty(col.Name, this.GetEdmPrimitiveTypeKind(col), isPk == false);
+
+                    if (isPk)
                     {
                         tableType.AddKeys(prop);
                     }
                 }
 
                 edmModel.AddElement(tableType);
-                var es = container.AddEntitySet($"{t.SchemaOwner}.{t.Name}", tableType);
+                var es = container.AddEntitySet($"{entityType.GetDefaultSchema()}.{entityType.GetDefaultTableName()}", tableType);
             }
 
             return edmModel;
         }
 
-        private IEntityType GetEntityType(DbContext context, DatabaseTable t)
+        private EdmPrimitiveTypeKind GetEdmPrimitiveTypeKind(IProperty column)
         {
-            var entityTypes = context.Model.GetEntityTypes();
-
-            foreach (var et in entityTypes)
-            {
-                if (et.GetSchema() != t.SchemaOwner)
-                    continue;
-
-                if (et.GetTableName() != t.Name)
-                    continue;
-
-                return et;
-            }
-
-            return null;
-        }
-
-        private EdmPrimitiveTypeKind GetEdmPrimitiveTypeKind(DatabaseColumn column)
-        {
-            var type = column.NetDataType();
+            var type = this.GetUnwrappedClrType(column.ClrType);
 
             if (type == typeof(string))
                 return EdmPrimitiveTypeKind.String;
@@ -98,9 +77,14 @@ namespace MAD.OData.Gateway.Services
 
             else if (type == typeof(DateTime) || type == typeof(DateTimeOffset))
             {
-                if (column.DbDataType == "date")
+                var typeMapping = column.GetTypeMapping();
+
+                if (typeMapping is SqlServerDateTimeTypeMapping dateMap)
                 {
-                    return EdmPrimitiveTypeKind.Date;
+                    if (dateMap.DbType == System.Data.DbType.Date)
+                        return EdmPrimitiveTypeKind.Date;
+                    else
+                        return EdmPrimitiveTypeKind.DateTimeOffset;
                 }
                 else
                 {
@@ -126,6 +110,18 @@ namespace MAD.OData.Gateway.Services
                 return EdmPrimitiveTypeKind.Single;
             else
                 throw new NotImplementedException();
+        }
+
+        private Type GetUnwrappedClrType(Type type)
+        {
+            if (type.IsNullableType())
+            {
+                return type.GenericTypeArguments[0];
+            }
+            else
+            {
+                return type;
+            }
         }
     }
 }

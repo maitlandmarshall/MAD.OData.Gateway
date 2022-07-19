@@ -14,7 +14,6 @@ var edmModel = await new EdmModelFactory(dbFactory, builder.Configuration.GetCon
 builder.Services.AddControllers().AddOData(opt => opt.AddRouteComponents(edmModel).EnableQueryFeatures(1000));
 builder.Services.AddSingleton(edmModel);
 builder.Services.AddTransient<IApplicationModelProvider, ODataApplicationModelProvider>();
-builder.Services.AddTransient<SqlKataFactory>();
 builder.Services.AddSingleton<DynamicDbContextFactory>(dbFactory);
 builder.Services.AddScoped<DbContext>(services =>
 {

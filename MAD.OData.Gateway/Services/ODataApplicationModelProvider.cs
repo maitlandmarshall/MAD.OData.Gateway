@@ -32,10 +32,6 @@ namespace MAD.OData.Gateway.Services
                     {
                         path = new ODataPathTemplate(new GenericODataSegmentTemplate("/{entityset}"));
                     }
-                    else if (a.ActionName == nameof(GatewayODataController.Count))
-                    {
-                        path = new ODataPathTemplate(new GenericODataSegmentTemplate("/{entityset}/$count"));
-                    }
                     else
                     {
                         continue;
