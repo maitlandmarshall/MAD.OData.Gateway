@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal;
 using Microsoft.OData.Edm;
+using Microsoft.OData.ModelBuilder;
 
 namespace MAD.OData.Gateway.Services
 {
@@ -18,7 +19,7 @@ namespace MAD.OData.Gateway.Services
             this.connectionString = connectionString;
         }
 
-        public async Task<IEdmModel> Create()
+        public IEdmModel Create()
         {
             using var db = this.dynamicDbContextFactory.CreateDbContext(this.connectionString);
             var entityTypes = db.Model.GetEntityTypes();
@@ -37,10 +38,16 @@ namespace MAD.OData.Gateway.Services
 
                 foreach (var col in columns)
                 {
-                    var isPk = col.IsPrimaryKey();
-                    var prop = tableType.AddStructuralProperty(col.Name, this.GetEdmPrimitiveTypeKind(col), isPk == false);
+                    // col.Name does not represent the true name of the column in the Source database
+                    // For example, if the source column name has a forward slash (/) EFCore will replace that with an underscore
+                    // This function will return the true database column name
+                    var columnName = col.GetColumnBaseName();
+                    var prop = tableType.AddStructuralProperty(columnName, this.GetEdmPrimitiveTypeKind(col), col.IsNullable);
 
-                    if (isPk)
+                    // Let the edmModel know what the CLR's property name is, as it may be different from the database columnName
+                    edmModel.SetAnnotationValue(prop, new ClrPropertyInfoAnnotation(col.PropertyInfo));
+
+                    if (col.IsPrimaryKey())
                     {
                         tableType.AddKeys(prop);
                     }

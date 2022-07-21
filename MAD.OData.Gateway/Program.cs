@@ -11,7 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", true);
 
 var dbFactory = new DynamicDbContextFactory();
-var edmModel = await new EdmModelFactory(dbFactory, builder.Configuration.GetConnectionString("odata")).Create();
+var edmModel = new EdmModelFactory(dbFactory, builder.Configuration.GetConnectionString("odata")).Create();
 
 builder.Services.Configure<AuthConfig>(builder.Configuration.GetSection("authentication"));
 builder.Services.AddTransient<AuthConfig>(cfg => cfg.GetRequiredService<IOptions<AuthConfig>>().Value);
@@ -37,11 +37,9 @@ var app = builder.Build();
 #if DEBUG
 app.UseODataRouteDebug();
 #endif
-
 app.UseODataQueryRequest();
 
 app.UseMiddleware<BasicAuthenticationMiddleware>();
-
 app.UseRouting();
 app.UseEndpoints(endpoints =>
 {
