@@ -54,7 +54,7 @@ namespace MAD.OData.Gateway.Services
                 }
 
                 edmModel.AddElement(tableType);
-                var es = container.AddEntitySet($"{entityType.GetDefaultSchema()}.{entityType.GetDefaultTableName()}", tableType);
+                container.AddEntitySet(entityType.GetEntitySetName(), tableType);
             }
 
             return edmModel;

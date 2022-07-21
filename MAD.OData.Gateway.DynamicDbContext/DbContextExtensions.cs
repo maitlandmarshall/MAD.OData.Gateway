@@ -20,23 +20,12 @@ namespace MAD.OData.Gateway.DynamicDbContext
 
         public static IEntityType GetEntityType(this DbContext context, string entitySetName)
         {
-            var entitySetSplit = entitySetName.Split(".");
-            var schema = entitySetSplit[0];
-            var name = entitySetSplit[1];
             var entityTypes = context.Model.GetEntityTypes();
 
             foreach (var et in entityTypes)
             {
-                var etSchema = et.GetDefaultSchema();
-                var etTableName = et.GetDefaultTableName();
-
-                if (etSchema != schema)
-                    continue;
-
-                if (etTableName != name)
-                    continue;
-
-                return et;
+                if (et.GetEntitySetName() == entitySetName)
+                    return et;
             }
 
             return null;
