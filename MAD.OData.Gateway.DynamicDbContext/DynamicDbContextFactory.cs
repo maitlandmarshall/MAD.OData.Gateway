@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.Loader;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -17,6 +10,13 @@ using Microsoft.EntityFrameworkCore.SqlServer.Scaffolding.Internal;
 using Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.Loader;
 
 namespace MAD.OData.Gateway.DynamicDbContext
 {
@@ -28,13 +28,17 @@ namespace MAD.OData.Gateway.DynamicDbContext
         {
             this.LoadAssembly(connectionString);
 
-            var type = assembly.GetType("TypedDataContext.Context.DataContext");
+            var type = this.assembly.GetType("TypedDataContext.Context.DataContext");
             _ = type ?? throw new Exception("DataContext type not found");
 
-            var constr = type.GetConstructor(Type.EmptyTypes);
+            var optionsBuilderType = typeof(DbContextOptionsBuilder<>).MakeGenericType(type);
+            var optionsBuilder = Activator.CreateInstance(optionsBuilderType) as DbContextOptionsBuilder;
+            var options = optionsBuilder.UseSqlServer(connectionString, cfg => cfg.EnableRetryOnFailure()).Options;
+
+            var constr = type.GetConstructor(new[] { typeof(DbContextOptions<>).MakeGenericType(type) });
             _ = constr ?? throw new Exception("DataContext ctor not found");
 
-            var dynamicContext = (DbContext)constr.Invoke(null);
+            var dynamicContext = (DbContext)constr.Invoke(new[] { options });
 
             return dynamicContext;
         }
