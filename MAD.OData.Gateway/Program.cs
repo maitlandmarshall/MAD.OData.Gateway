@@ -2,6 +2,7 @@ using MAD.OData.Gateway;
 using MAD.OData.Gateway.DynamicDbContext;
 using MAD.OData.Gateway.Middlewares;
 using MAD.OData.Gateway.Services;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.AspNetCore.OData;
 using Microsoft.EntityFrameworkCore;
@@ -32,7 +33,15 @@ builder.Services.AddScoped<DbContext>(services =>
     return dbContext;
 });
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
+
 var app = builder.Build();
+
+app.UseForwardedHeaders();
 
 #if DEBUG
 app.UseODataRouteDebug();
