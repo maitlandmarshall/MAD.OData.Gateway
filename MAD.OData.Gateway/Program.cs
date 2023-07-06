@@ -34,6 +34,11 @@ builder.Services.AddScoped<DbContext>(services =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.All
+});
+
 #if DEBUG
 app.UseODataRouteDebug();
 #endif
